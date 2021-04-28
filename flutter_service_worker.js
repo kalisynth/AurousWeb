@@ -3,24 +3,27 @@ const MANIFEST = 'flutter-app-manifest';
 const TEMP = 'flutter-temp-cache';
 const CACHE_NAME = 'flutter-app-cache';
 const RESOURCES = {
-  "assets/AssetManifest.json": "63ba43a0b3e6e41b87d4fd3e9bef872c",
+  "assets/AssetManifest.json": "d76aa63bc0eb2e53fc3df36a3cc4b8e8",
+"assets/assets/app_strings.dart": "d41d8cd98f00b204e9800998ecf8427e",
 "assets/assets/img/aurous_logo_large.png": "ed14a81fae62ea9920f70211d1254abf",
 "assets/assets/img/avatars/default_avatar.png": "d96c2c91caa2043e1da4b89e9031423d",
 "assets/assets/img/avatars/default_avatar_meet.png": "bf8fdae57c026b35f5494989eef39eb2",
 "assets/assets/img/avatars/default_avatar_zoom.png": "a286392601e2872f1357ded9159c7fcb",
 "assets/assets/img/bg/light_bg.png": "90580d14eb9beb97550b34d44cd40bab",
 "assets/FontManifest.json": "dc3d03800ccca4601324923c0b1d6d57",
-"assets/fonts/MaterialIcons-Regular.otf": "a68d2a28c526b3b070aefca4bac93d25",
-"assets/NOTICES": "59f00d2236f96ef10794ffc5427aaffc",
+"assets/fonts/MaterialIcons-Regular.otf": "4e6447691c9509f7acdbf8a931a85ca1",
+"assets/NOTICES": "26ed82e25c8ea26ce5691b7fce80f03c",
 "assets/packages/cupertino_icons/assets/CupertinoIcons.ttf": "115e937bb829a890521f72d2e664b632",
 "favicon.png": "5dcef449791fa27946b3d35ad8803796",
 "icons/Icon-192.png": "ac9a721a12bbc803b44f645561ecb1e1",
 "icons/Icon-512.png": "96e752610906ba2a93c65f8abe1645f1",
-"index.html": "43149323d5f5066db468ff9b8f5c3199",
-"/": "43149323d5f5066db468ff9b8f5c3199",
-"main.dart.js": "2f8e234052ad02f5db1028cf0c7495ed",
+"index.html": "35a58c44423817ecb698eb11021ca27e",
+"/": "35a58c44423817ecb698eb11021ca27e",
+"jsfunctions.js": "527047b4742849d7741d0e74f3aea90e",
+"main.dart.js": "7347fd652665e808ea090eb5d378dff1",
 "manifest.json": "6e37734c79d834751e39742d5d3517e3",
-"SyncToy_8171bd1e-c97f-4f4f-b58e-0739c1638d7e.dat": "68ba4e34487265322ccca6df0add4635"
+"SyncToy_8171bd1e-c97f-4f4f-b58e-0739c1638d7e.dat": "68ba4e34487265322ccca6df0add4635",
+"version.json": "4162556d16194ef737c3d9b78eb06ca9"
 };
 
 // The application shell files that are downloaded before a service worker can
@@ -34,10 +37,11 @@ const CORE = [
 "assets/FontManifest.json"];
 // During install, the TEMP cache is populated with the application shell files.
 self.addEventListener("install", (event) => {
+  self.skipWaiting();
   return event.waitUntil(
     caches.open(TEMP).then((cache) => {
       return cache.addAll(
-        CORE.map((value) => new Request(value + '?revision=' + RESOURCES[value], {'cache': 'reload'})));
+        CORE.map((value) => new Request(value, {'cache': 'reload'})));
     })
   );
 });
@@ -102,6 +106,9 @@ self.addEventListener("activate", function(event) {
 // The fetch handler redirects requests for RESOURCE files to the service
 // worker cache.
 self.addEventListener("fetch", (event) => {
+  if (event.request.method !== 'GET') {
+    return;
+  }
   var origin = self.location.origin;
   var key = event.request.url.substring(origin.length + 1);
   // Redirect URLs to the index.html
@@ -111,9 +118,10 @@ self.addEventListener("fetch", (event) => {
   if (event.request.url == origin || event.request.url.startsWith(origin + '/#') || key == '') {
     key = '/';
   }
-  // If the URL is not the RESOURCE list, skip the cache.
+  // If the URL is not the RESOURCE list then return to signal that the
+  // browser should take over.
   if (!RESOURCES[key]) {
-    return event.respondWith(fetch(event.request));
+    return;
   }
   // If the URL is the index.html, perform an online-first request.
   if (key == '/') {
@@ -137,10 +145,12 @@ self.addEventListener('message', (event) => {
   // SkipWaiting can be used to immediately activate a waiting service worker.
   // This will also require a page refresh triggered by the main worker.
   if (event.data === 'skipWaiting') {
-    return self.skipWaiting();
+    self.skipWaiting();
+    return;
   }
-  if (event.message === 'downloadOffline') {
+  if (event.data === 'downloadOffline') {
     downloadOffline();
+    return;
   }
 });
 
@@ -157,7 +167,7 @@ async function downloadOffline() {
     }
     currentContent[key] = true;
   }
-  for (var resourceKey in Object.keys(RESOURCES)) {
+  for (var resourceKey of Object.keys(RESOURCES)) {
     if (!currentContent[resourceKey]) {
       resources.push(resourceKey);
     }
